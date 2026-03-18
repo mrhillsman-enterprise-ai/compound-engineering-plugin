@@ -16,7 +16,8 @@ jobs:
         shell: bash
         run: |
           title='${{ github.event.pull_request.title }}'
-          if [[ ! "$title" =~ ^[a-z]+(\([^)]+\))?(!)?:\ .+ ]]; then
+          pattern='^[a-z]+(\([^)]+\))?(!)?: .+'
+          if ! printf '%s\n' "$title" | grep -Eq "$pattern"; then
             echo "PR title must use conventional format: type(optional-scope): description"
             echo "Examples: 'fix: correct release preview', 'feat(coding-tutor): add quiz reset'"
             exit 1
