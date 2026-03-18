@@ -1,7 +1,7 @@
 ---
 title: "feat: Integrate auto memory as data source for ce:compound and ce:compound-refresh"
 type: feat
-status: active
+status: completed
 date: 2026-03-18
 origin: docs/brainstorms/2026-03-18-auto-memory-integration-requirements.md
 ---
