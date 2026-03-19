@@ -130,5 +130,6 @@ describe("release metadata", () => {
 
     expect(changedPaths).toContain(path.join(root, "plugins", "compound-engineering", ".cursor-plugin", "plugin.json"))
     expect(changedPaths).toContain(path.join(root, ".claude-plugin", "marketplace.json"))
+    expect(changedPaths).toContain(path.join(root, ".cursor-plugin", "marketplace.json"))
   })
 })
