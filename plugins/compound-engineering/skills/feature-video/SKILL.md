@@ -257,11 +257,15 @@ agent-browser eval "document.getElementById('new_comment_field').value"
 
 Store this value as `SAVED_TEXTAREA`. If non-empty, it will be restored after extracting the upload URL.
 
-Upload the video via the hidden file input:
+Upload the video via the hidden file input. Use the caller-provided `.mp4` path if in upload-only resume mode, otherwise use the current run's encoded video:
 
 ```bash
-agent-browser upload '#fc-new_comment_field' .context/compound-engineering/feature-video/[RUN_ID]/videos/feature-demo.mp4
+agent-browser upload '#fc-new_comment_field' [VIDEO_FILE_PATH]
 ```
+
+Where `[VIDEO_FILE_PATH]` is either:
+- The `.mp4` path passed as the first argument (upload-only resume mode)
+- `.context/compound-engineering/feature-video/[RUN_ID]/videos/feature-demo.mp4` (normal recording flow)
 
 Wait for GitHub to process the upload (typically 3-5 seconds), then read the textarea value:
 
@@ -276,13 +280,13 @@ agent-browser eval "document.getElementById('new_comment_field').value"
 2. If still on the PR page, wait an additional 5 seconds and re-read the textarea (GitHub processing can be slow).
 3. If validation still fails after retry, report the failure and the local video path so the user can upload manually.
 
-Restore the original textarea content (or clear if it was empty). When restoring, JSON-encode the saved text to safely handle apostrophes, newlines, and other special characters:
+Restore the original textarea content (or clear if it was empty). A JSON-encoded string is also a valid JavaScript string literal, so assign it directly without `JSON.parse`:
 
 ```bash
-agent-browser eval "const ta = document.getElementById('new_comment_field'); ta.value = JSON.parse('[SAVED_TEXTAREA_JSON_ENCODED]'); ta.dispatchEvent(new Event('input', { bubbles: true }))"
+agent-browser eval "const ta = document.getElementById('new_comment_field'); ta.value = [SAVED_TEXTAREA_AS_JS_STRING]; ta.dispatchEvent(new Event('input', { bubbles: true }))"
 ```
 
-To prepare the value: take the SAVED_TEXTAREA string, JSON-encode it (e.g., `JSON.stringify(value)` produces `"text with 'quotes' and\nnewlines"`), then embed that JSON string literal in the eval. If SAVED_TEXTAREA was empty, pass `""` instead.
+To prepare the value: take the SAVED_TEXTAREA string and produce a JS string literal from it -- escape backslashes, double quotes, and newlines (e.g., `"text with \"quotes\" and\nnewlines"`). If SAVED_TEXTAREA was empty, use `""`. The result is embedded directly as the right-hand side of the assignment -- no `JSON.parse` call needed.
 
 ### 7. Update PR Description
 
