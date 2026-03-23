@@ -52,7 +52,8 @@ ls -la docs/brainstorms/*-requirements.md 2>/dev/null | head -10
 8. **If `Resolve Before Planning` contains any items, stop.** Do not proceed with planning. Tell the user planning is blocked by unanswered brainstorm questions and direct them to resume `/ce:brainstorm` or answer those questions first.
 
 **If multiple source documents could match:**
-Use **AskUserQuestion tool** to ask which source document to use, or whether to proceed without one.
+- **In pipeline mode:** use the most recent matching document automatically.
+- **Otherwise:** Use **AskUserQuestion tool** to ask which source document to use, or whether to proceed without one.
 
 **If no requirements document is found (or not relevant), run idea refinement:**
 
@@ -70,8 +71,9 @@ Refine the idea through collaborative dialogue using the **AskUserQuestion tool*
 - **Topic risk**: Security, payments, external APIs warrant more caution
 - **Uncertainty level**: Is the approach clear or open-ended?
 
-**Skip option:** If the feature description is already detailed, offer:
-"Your description is clear. Should I proceed with research, or would you like to refine it further?"
+**Skip option:** If the feature description is already detailed:
+- **In pipeline mode:** proceed to research automatically.
+- **Otherwise:** offer: "Your description is clear. Should I proceed with research, or would you like to refine it further?"
 
 ## Main Tasks
 
@@ -552,7 +554,20 @@ Use the Write tool to save the complete plan to `docs/plans/YYYY-MM-DD-NNN-<type
 
 Confirm: "Plan written to docs/plans/[filename]"
 
-**Pipeline mode:** If invoked from an automated workflow (LFG, SLFG, or any `disable-model-invocation` context), skip all AskUserQuestion calls. Make decisions automatically and proceed to writing the plan without interactive prompts.
+## Pipeline Mode
+
+When invoked from an automated workflow (LFG, SLFG, or any `disable-model-invocation` context), distinguish between two kinds of prompts:
+
+- **Workflow prompts** (post-generation options, "what do you want to do next?", refine-vs-proceed offers) → skip. The pipeline handles routing.
+- **Content prompts** (idea refinement when no requirements doc exists, resolving ambiguity) → still ask when `ce:brainstorm` did not run or did not produce a requirements document. If a requirements document exists, idea refinement is skipped per Phase 0 rules and no content prompts are needed.
+
+Specific behavior:
+
+- **Multiple source documents:** use the most recent matching document automatically instead of asking.
+- **Idea refinement (no source doc):** still permitted -- these are content questions that improve plan quality.
+- **Detail level selection and research decisions:** make automatically based on scope and risk signals.
+- **Post-Generation Options are skipped.** Do not present the options menu or invoke `/ce:work`. Write the plan file, confirm it was written, and return control to the calling workflow.
+- **Write the plan file as normal.** The next pipeline step depends on finding it in `docs/plans/`.
 
 ## Output Format
 
@@ -572,6 +587,8 @@ Examples:
 - ❌ `docs/plans/feat-user-auth-plan.md` (missing date prefix and sequence number)
 
 ## Post-Generation Options
+
+**In pipeline mode:** skip this section entirely and return control to the calling workflow (see Pipeline Mode above).
 
 After writing the plan file, use the **AskUserQuestion tool** to present these options:
 
