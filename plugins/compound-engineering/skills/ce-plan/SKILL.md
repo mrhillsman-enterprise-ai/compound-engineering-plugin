@@ -579,7 +579,6 @@ If the plan originated from a requirements document, re-read that document and v
 **REQUIRED: Write the plan file to disk before presenting any options.**
 
 Use the Write tool to save the complete plan to:
-
 ```text
 docs/plans/YYYY-MM-DD-NNN-<type>-<descriptive-name>-plan.md
 ```
