@@ -15,7 +15,17 @@ This command takes a work document (plan, specification, or todo file) and execu
 
 ## Autopilot Mode
 
-When invoked from `lfg` or `slfg`, use the same safe defaults described below and avoid workflow prompts.
+Autopilot is active only when the input begins with:
+
+- `[ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] ::`
+
+When that marker is present:
+- Strip the marker before processing the input document path
+- Read the manifest path from the marker
+- Validate that the manifest describes an active autopilot run
+- Use the manifest's artifacts and gate state as part of execution context
+
+Then use the same safe defaults described below and avoid workflow prompts.
 
 Specific behavior:
 
@@ -66,7 +76,7 @@ Specific behavior:
    Choose the branch strategy using this precedence:
 
    - **Explicit user instruction wins** — if the user asked to use `main`, create a new branch, or use a worktree, do that.
-   - **Autopilot mode (`lfg`/`slfg`)** — if already on a non-default branch, continue on `current_branch` and note that choice briefly. If on the default branch without explicit permission to stay there, create a feature branch automatically.
+   - **Autopilot mode (active `lfg` run with marker/manifest)** — if already on a non-default branch, continue on `current_branch` and note that choice briefly. If on the default branch without explicit permission to stay there, create a feature branch automatically.
    - **Standalone `/ce:work-beta` on a non-default branch** — do not silently reuse the branch. Ask whether to continue on `current_branch`, create a new feature branch, or use a worktree instead.
    - **Standalone `/ce:work-beta` on the default branch without explicit permission to stay there** — ask whether to create a feature branch or use a worktree. Continuing on the default branch still requires explicit authorization.
    - **Use a worktree** when the user explicitly asked for it or the environment clearly calls for isolated parallel development.

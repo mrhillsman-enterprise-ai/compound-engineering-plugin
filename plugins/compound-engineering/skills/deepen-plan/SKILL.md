@@ -66,7 +66,7 @@ Then skip workflow prompts and return control to the caller.
 
 Specific behavior:
 
-- If the caller did not pass a plan path, treat that as a pipeline invocation error. Report it briefly and stop rather than asking the user to choose a plan.
+- If the caller did not pass a plan path, fall back to the manifest's `artifacts.plan_doc` when present. If neither the caller nor the manifest provides a plan path, treat that as a pipeline invocation error. Report it briefly and stop rather than asking the user to choose a plan.
 - If the plan already appears sufficiently grounded, note that briefly and return control. Do not offer next-step options.
 - If the plan is strengthened, briefly summarize which sections were improved and return control. Do not offer next-step options.
 - If deepening reveals a true product-level blocker that would change behavior, scope, or success criteria, surface it clearly and stop so the caller can route back to `ce:brainstorm` or ask the user.
@@ -90,7 +90,7 @@ Decision boundaries in autopilot mode:
 
 If the plan path above is empty:
 1. Check `docs/plans/` for recent files
-2. In autopilot mode, stop and report that the caller must provide the plan path. Otherwise, ask the user which plan to deepen using the platform's blocking question tool when available (see Interaction Method). Otherwise, present numbered options in chat and wait for the user's reply before proceeding
+2. In autopilot mode, first check whether the manifest already points to `artifacts.plan_doc` and use that path when available. If the manifest does not provide a plan path either, stop and report that the caller must provide one. Otherwise, ask the user which plan to deepen using the platform's blocking question tool when available (see Interaction Method). Otherwise, present numbered options in chat and wait for the user's reply before proceeding
 
 Do not proceed until you have a valid plan file path.
 

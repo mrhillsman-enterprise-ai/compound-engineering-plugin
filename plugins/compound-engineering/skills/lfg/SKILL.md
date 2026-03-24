@@ -42,7 +42,7 @@ Implementation-mode selection rule:
 
 ## Phase 0: Assess and Route
 
-If `$ARGUMENTS` is empty, do not assess complexity yet. Route to **Full pipeline** immediately and start with `ce:brainstorm` so brainstorm can ask the user for the missing feature description. Do not ask the user yourself and do not guess a route from an empty prompt.
+If `$ARGUMENTS` is empty, do not assess complexity yet. Route to **Full pipeline** so it can first check whether there is resumable work on the current branch/worktree. Do not start with `ce:brainstorm` before resume detection runs. If full-pipeline resume detection finds nothing resumable, stop and tell the user briefly that there is nothing to resume and they should rerun `/lfg <feature description>` to start new work.
 
 Read the feature description and choose the cheapest execution path that will handle it well.
 
@@ -106,7 +106,7 @@ Before invoking downstream skills:
    - `wrap_up`
 5. Mark a gate complete only when current evidence supports it. If you cannot prove a gate is complete, leave it `pending` or `blocked`.
 6. Create or backfill `.context/compound-engineering/autopilot/<run-id>/session.json` and `.context/compound-engineering/autopilot/<run-id>/decisions.md`.
-7. Advance the first unmet gate you can justify safely.
+7. Advance one gate at a time. After each downstream skill returns, update the manifest evidence, recompute the first unmet gate, and continue until all required gates are complete or a real blocker stops the run.
 
 Late-stage rule:
 
@@ -117,41 +117,45 @@ Late-stage rule:
 - Keep the run `active` while CI is pending or a required late-stage gate is still `pending` or `blocked`.
 - Transition to `completed` only when all required gates are complete and no required external blocker remains.
 
-1. If the first unmet gate is `requirements`, run:
+1. If the recomputed first unmet gate is `requirements`, run:
    - `/ce:brainstorm [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: $ARGUMENTS`
 
    Brainstorm runs in autopilot mode: it assesses whether requirements exploration is needed and either skips (if requirements are already clear) or runs brainstorm with content questions as needed and writes a requirements document. It will not present handoff options or invoke `/ce:plan` -- control returns here.
 
 2. **Optional:** If the `ralph-loop` skill is available and you are continuing from an early-stage unmet gate, run `/ralph-loop:ralph-loop "finish all slash commands" --completion-promise "DONE"` to iterate autonomously through the remaining steps. Brainstorm ran first because it may need user interaction; everything from here on is autonomous and benefits from ralph's fresh-context iteration. If not available or it fails, continue.
 
-3. If the first unmet gate is `plan`, run:
+3. If the recomputed first unmet gate is `plan`, run:
    - `/ce:plan [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: $ARGUMENTS`
 
    If brainstorm collected the feature description because `$ARGUMENTS` was empty, carry that clarified description forward into the `ce:plan` invocation instead of calling it with empty arguments. Treat that clarified description as the resolved planning input for all `ce:plan` attempts in this run. Do not ask the user for the same description twice.
 
    GATE: Verify that `ce:plan` produced a plan file in `docs/plans/`. If no plan file was created, run `ce:plan` again with the same resolved planning input used for the first `ce:plan` attempt. Do NOT fall back to the original empty `$ARGUMENTS`, and do NOT proceed until a written plan exists.
 
-4. **Conditionally** run `/compound-engineering:deepen-plan [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: <plan-path>`
+   After the plan exists, update `artifacts.plan_doc` in the autopilot manifest with that exact plan path. Use that same path for every later `deepen-plan` and `ce:work` invocation in this run.
+
+4. If the recomputed first unmet gate is still `plan`, **conditionally** run `/compound-engineering:deepen-plan [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: <plan-path-from-artifacts.plan_doc>`
 
    Run only if the plan is `Standard` or `Deep`, touches a high-risk area (auth, security, payments, migrations, external APIs, significant rollout concerns), or still has obvious confidence gaps in decisions, sequencing, system-wide impact, risks, or verification.
 
    GATE: If deepen-plan ran, confirm the plan was deepened or judged sufficiently grounded. If skipped, briefly note why and proceed.
 
-5. If the first unmet gate is `implementation`, run:
-   - `/ce:work [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: <plan-path>`
+5. If the recomputed first unmet gate is `implementation`, run:
+   - `/ce:work [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: <plan-path-from-artifacts.plan_doc>`
 
    GATE: Verify that implementation work was performed -- files were created or modified beyond the plan. Do NOT proceed if no code changes were made.
 
-6. If the first unmet gate is `review`, run `/ce:review` -- catch issues before they ship
+6. If the recomputed first unmet gate is `review`, run `/ce:review [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: current` -- catch issues before they ship
 
-7. If the first unmet gate is `verification`, conditionally run `/compound-engineering:test-browser [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: current` -- verify the feature works in a real browser. Read `compound-engineering.local.md` frontmatter; skip if `autopilot_features.test_browser` is `false`. If the setting is missing, assume enabled.
-
-8. `/compound-engineering:todo-resolve` -- resolve findings from review and testing, compound on learnings, clean up completed todos
+7. If review created todos, run `/compound-engineering:todo-resolve` before advancing to later gates -- resolve findings, compound on learnings, and clean up completed todos.
 
    GATE: If todo resolution changed code or behavior, re-verify the final state before proceeding. Run the narrowest checks that cover what changed (for example targeted tests, lint/typecheck, or another browser check for UI-affecting changes). If todo resolution made no functional code changes, briefly note that and continue.
 
-9. If the first unmet gate is `wrap_up`, conditionally run `/compound-engineering:feature-video [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: current` -- record a walkthrough and add to the PR. Read `compound-engineering.local.md` frontmatter; skip if `autopilot_features.feature_video` is `false`. If the setting is missing, assume enabled. Also skip if the project has no browser-based UI (e.g., CLI tools, plugins, libraries, APIs).
+8. If the recomputed first unmet gate is `verification`, conditionally run `/compound-engineering:test-browser [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: current` -- verify the feature works in a real browser. Read `compound-engineering.local.md` frontmatter; skip if `autopilot_features.test_browser` is `false`. If the setting is missing, assume enabled.
 
-10. Output `<promise>DONE</promise>` only when all required gates are complete. If the run is only waiting on external CI, report that explicitly instead of claiming completion.
+9. If verification created todos, run `/compound-engineering:todo-resolve` before advancing -- same resolve/compound/clean-up cycle as step 7.
+
+10. If the recomputed first unmet gate is `wrap_up`, conditionally run `/compound-engineering:feature-video [ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] :: current` -- record a walkthrough and add to the PR. Read `compound-engineering.local.md` frontmatter; skip if `autopilot_features.feature_video` is `false`. If the setting is missing, assume enabled. Also skip if the project has no browser-based UI (e.g., CLI tools, plugins, libraries, APIs).
+
+11. Output `<promise>DONE</promise>` only when all required gates are complete. If the run is only waiting on external CI, report that explicitly instead of claiming completion.
 
 Start now.

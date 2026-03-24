@@ -23,10 +23,15 @@ describe("autopilot skill contract", () => {
     expect(lfg).toContain("`implementation_mode` = `standard | swarm`")
     expect(lfg).toContain("if the setting is missing, assume `standard`")
     expect(lfg).toContain("An open PR does not mean the run is done.")
+    expect(lfg).toContain("If `$ARGUMENTS` is empty, do not assess complexity yet. Route to **Full pipeline** so it can first check whether there is resumable work")
+    expect(lfg).toContain("After each downstream skill returns, update the manifest evidence, recompute the first unmet gate")
+    expect(lfg).toContain("update `artifacts.plan_doc` in the autopilot manifest")
+    expect(lfg).toContain("<plan-path-from-artifacts.plan_doc>")
     expect(lfg).toContain("If the run is only waiting on external CI, report that explicitly instead of claiming completion.")
 
     expect(slfg).toContain("[DEPRECATED] Compatibility wrapper")
     expect(slfg).toContain("Immediately route to `lfg`")
+    expect(slfg).toContain("explicit swarm request in the forwarded input")
     expect(slfg).toContain("Do not duplicate routing logic, manifest logic, or downstream skill-calling rules here.")
   })
 
@@ -35,11 +40,15 @@ describe("autopilot skill contract", () => {
     const plan = await readRepoFile("plugins/compound-engineering/skills/ce-plan/SKILL.md")
     const deepenPlan = await readRepoFile("plugins/compound-engineering/skills/deepen-plan/SKILL.md")
     const work = await readRepoFile("plugins/compound-engineering/skills/ce-work/SKILL.md")
+    const workBeta = await readRepoFile("plugins/compound-engineering/skills/ce-work-beta/SKILL.md")
 
     for (const content of [brainstorm, plan, deepenPlan, work]) {
       expect(content).toContain("[ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] ::")
       expect(content).toContain("Validate that the manifest describes an active autopilot run")
     }
+
+    expect(workBeta).toContain("[ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] ::")
+    expect(workBeta).toContain("Validate that the manifest describes an active autopilot run")
 
     expect(brainstorm).toContain("`Product Manager > Designer > Engineer`")
     expect(brainstorm).toContain("**May decide automatically**")
@@ -52,6 +61,7 @@ describe("autopilot skill contract", () => {
 
     expect(deepenPlan).toContain("`Engineer > Product Manager > Designer`")
     expect(deepenPlan).toContain("keep the canonical decision rows in the run-scoped `decisions.md`")
+    expect(deepenPlan).toContain("fall back to the manifest's `artifacts.plan_doc` when present")
 
     expect(work).toContain("`Engineer > Designer > Product Manager`")
     expect(work).toContain("`Local Leverage`")
@@ -59,6 +69,8 @@ describe("autopilot skill contract", () => {
   })
 
   test("utility skills and review utility use the shared autopilot contract", async () => {
+    const review = await readRepoFile("plugins/compound-engineering/skills/ce-review/SKILL.md")
+    const reviewBeta = await readRepoFile("plugins/compound-engineering/skills/ce-review-beta/SKILL.md")
     const documentReview = await readRepoFile("plugins/compound-engineering/skills/document-review/SKILL.md")
     const schema = await readRepoFile(
       "plugins/compound-engineering/skills/document-review/references/findings-schema.json",
@@ -67,6 +79,13 @@ describe("autopilot skill contract", () => {
     const featureVideo = await readRepoFile("plugins/compound-engineering/skills/feature-video/SKILL.md")
     const agents = await readRepoFile("plugins/compound-engineering/AGENTS.md")
     const readme = await readRepoFile("plugins/compound-engineering/README.md")
+
+    expect(review).toContain("[ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] ::")
+    expect(review).toContain("If no settings file exists:")
+    expect(review).toContain("In autopilot mode, skip this section entirely. `lfg` owns the verification step")
+
+    expect(reviewBeta).toContain("[ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] ::")
+    expect(reviewBeta).toContain("Default to `mode:autofix` when no explicit mode token remains")
 
     expect(documentReview).toContain("review utility, not a primary decision-maker")
     expect(documentReview).toContain("`mechanical-fix`")
