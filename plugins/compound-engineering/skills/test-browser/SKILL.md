@@ -24,6 +24,29 @@ Platform-specific hints:
 - `agent-browser` CLI installed (see Setup below)
 - Git repository with changes to test
 
+## Autopilot Mode
+
+Autopilot is active only when the input begins with:
+
+- `[ce-autopilot manifest=.context/compound-engineering/autopilot/<run-id>/session.json] ::`
+
+When that marker is present:
+- Strip the marker before processing the normal argument
+- Read the manifest path from the marker
+- Validate that the manifest describes an active autopilot run
+- Treat this skill as an autopilot contract consumer, not a substantive decision owner
+
+Then prefer progress over interaction and use safe defaults.
+
+Specific behavior:
+
+- Default to headless mode. Do not ask whether to watch the browser.
+- If `agent-browser` cannot be installed or the dev server is not running, note the skip briefly and return control to the caller.
+- If a flow requires human verification (OAuth, email, payments, SMS, external service confirmation), mark it as manual verification required, note it briefly, and continue testing other routes.
+- If a page test fails, capture the failure, create a todo file in `.context/compound-engineering/todos/` for follow-up, note it briefly, and continue testing the remaining routes.
+- Briefly inform the user when a material verification step was skipped or degraded. Do not block on the prompt.
+- Do not append substantive product or implementation decisions to the autopilot decision log. This skill only emits operational notes and todos.
+
 ## Setup
 
 ```bash
@@ -48,11 +71,16 @@ Before starting, verify `agent-browser` is available:
 command -v agent-browser >/dev/null 2>&1 && echo "Ready" || (echo "Installing..." && npm install -g agent-browser && agent-browser install)
 ```
 
-If installation fails, inform the user and stop.
+If installation fails:
 
-### 2. Ask Browser Mode
+- In autopilot mode, note the skip briefly and return control to the caller.
+- Otherwise, inform the user and stop.
 
-Ask the user whether to run headed or headless (using the platform's question tool — e.g., `AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini — or present options and wait for a reply):
+### 2. Choose Browser Mode
+
+In autopilot mode, default to headless and note that choice briefly.
+
+Otherwise, ask the user whether to run headed or headless (using the platform's question tool — e.g., `AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini — or present options and wait for a reply):
 
 ```
 Do you want to watch the browser tests run?
@@ -133,7 +161,10 @@ agent-browser open http://localhost:${PORT}
 agent-browser snapshot -i
 ```
 
-If the server is not running, inform the user:
+If the server is not running:
+
+- In autopilot mode, note the skip briefly and return control to the caller.
+- Otherwise, inform the user:
 
 ```
 Server not running on port ${PORT}
@@ -193,7 +224,9 @@ Pause for human input when testing touches flows that require external interacti
 | SMS | "Verify you received the SMS code" |
 | External APIs | "Confirm the [service] integration is working" |
 
-Ask the user (using the platform's question tool, or present numbered options and wait):
+In autopilot mode, mark the route as requiring manual verification, note it briefly, and continue.
+
+Otherwise, ask the user (using the platform's question tool, or present numbered options and wait):
 
 ```
 Human Verification Needed
@@ -215,7 +248,10 @@ When a test fails:
    - Screenshot the error state: `agent-browser screenshot error.png`
    - Note the exact reproduction steps
 
-2. **Ask the user how to proceed:**
+2. **Decide how to proceed:**
+
+   - In autopilot mode, use `todo-create` when available to create a pending todo for the failure immediately, note it briefly, and continue testing the remaining routes. If `todo-create` is unavailable, create the pending todo file directly in `.context/compound-engineering/todos/`. Do not leave the failure only in the summary or in an ephemeral finding format.
+   - Otherwise, ask the user how to proceed:
 
    ```
    Test Failed: [route]
@@ -230,8 +266,10 @@ When a test fails:
    ```
 
 3. **If "Fix now":** investigate, propose a fix, apply, re-run the failing test
-4. **If "Create todo":** load the `todo-create` skill and create a todo with priority p1 and description `browser-test-{description}`, continue
+4. **If "Create todo":** use `todo-create` when available to create a pending p1 todo with description `browser-test-{description}`. Otherwise create `{id}-pending-p1-browser-test-{description}.md` directly in `.context/compound-engineering/todos/`, continue
 5. **If "Skip":** log as skipped, continue
+
+For autopilot failures, use `todo-create` when available. Otherwise create the todo directly in `.context/compound-engineering/todos/` using the standard naming and structure.
 
 ### 10. Test Summary
 
