@@ -440,7 +440,7 @@ After presenting findings and verdict (Stage 6), route the next steps by mode. R
   - applied fixes
   - residual actionable work
   - advisory-only outputs
-- In autonomous mode, create durable `todos/` items only for unresolved actionable findings whose final owner is `downstream-resolver`.
+- In autonomous mode, create durable `todos/` items only for unresolved actionable findings whose final owner is `downstream-resolver`. Load the `file-todos` skill for the naming convention, YAML frontmatter structure, and template. Each todo should map the finding's severity to the todo priority (`P0`/`P1` -> `p1`, `P2` -> `p2`, `P3` -> `p3`) and set `status: ready` since these findings have already been triaged by synthesis.
 - Do not create todos for `advisory` findings, `owner: human`, `owner: release`, or protected-artifact cleanup suggestions.
 - If only advisory outputs remain, create no todos.
 - Interactive mode may offer to externalize residual actionable work after fixes, but it is not required to finish the review.
