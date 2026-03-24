@@ -99,7 +99,7 @@ Process findings from all agents through this pipeline. **Order matters** -- eac
 ### 3.1 Validate
 
 Check each agent's returned JSON against [findings-schema.json](./references/findings-schema.json):
-- Drop findings missing required fields (title, severity, section, confidence, evidence)
+- Drop findings missing any required field defined in the schema
 - Drop findings with invalid enum values
 - Note the agent name for any malformed output in the Coverage section
 
