@@ -382,7 +382,7 @@ If the user explicitly requests a separate file, append `-deepened` before `.md`
 - `docs/plans/2026-03-15-001-feat-example-plan-deepened.md`
 
 If artifact-backed mode was used and the user did not ask to inspect the scratch files:
-- clean up the temporary scratch directory after the plan is safely written
+- delete the specific per-run scratch directory (e.g., `.context/compound-engineering/deepen-plan-beta/<run-id>/`) after the plan is safely written. Do not delete any other `.context/` subdirectories.
 - if cleanup is not practical on the current platform, say where the artifacts were left and that they are temporary workflow output
 
 ## Post-Enhancement Options
