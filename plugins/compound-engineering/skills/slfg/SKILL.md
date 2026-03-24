@@ -25,17 +25,17 @@ Swarm-enabled LFG. Run these steps in order, parallelizing where indicated. Skil
 
 ## Parallel Phase
 
-After work completes, launch steps 6 and 7 as **parallel swarm agents** (both only need code to be written):
+After work completes, read `compound-engineering.local.md` frontmatter for `autopilot_features` settings (if missing, assume all enabled). Launch steps 6 and 7 as **parallel swarm agents** (both only need code to be written):
 
 6. `/ce:review` -- catch issues before they ship
-7. `/compound-engineering:test-browser` -- verify the feature works in a real browser
+7. **Conditionally** run `/compound-engineering:test-browser` -- verify the feature works in a real browser. Skip if `autopilot_features.test_browser` is `false`. If the setting is missing, assume enabled.
 
 Wait for both to complete before continuing.
 
 ## Finalize Phase
 
 8. `/compound-engineering:resolve-todo-parallel` -- resolve findings from review and testing, compound on learnings, clean up completed todos
-9. **Conditionally** run `/compound-engineering:feature-video` -- record a walkthrough and add to the PR. Skip if the project has no browser-based UI (e.g., CLI tools, plugins, libraries, APIs).
+9. **Conditionally** run `/compound-engineering:feature-video` -- record a walkthrough and add to the PR. Skip if `autopilot_features.feature_video` is `false`. If the setting is missing, assume enabled. Also skip if the project has no browser-based UI (e.g., CLI tools, plugins, libraries, APIs).
 10. Output `<promise>DONE</promise>` when all preceding steps are complete
 
 Start with step 1 now.

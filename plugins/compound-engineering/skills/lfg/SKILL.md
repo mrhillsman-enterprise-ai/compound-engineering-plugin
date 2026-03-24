@@ -29,11 +29,11 @@ Execute every step below in order. The early phases (brainstorm, plan) exist to 
 
 6. `/ce:review` -- catch issues before they ship
 
-7. `/compound-engineering:test-browser` -- verify the feature works in a real browser
+7. **Conditionally** run `/compound-engineering:test-browser` -- verify the feature works in a real browser. Read `compound-engineering.local.md` frontmatter; skip if `autopilot_features.test_browser` is `false`. If the setting is missing, assume enabled.
 
 8. `/compound-engineering:resolve-todo-parallel` -- resolve findings from review and testing, compound on learnings, clean up completed todos
 
-9. **Conditionally** run `/compound-engineering:feature-video` -- record a walkthrough and add to the PR. Skip if the project has no browser-based UI (e.g., CLI tools, plugins, libraries, APIs).
+9. **Conditionally** run `/compound-engineering:feature-video` -- record a walkthrough and add to the PR. Read `compound-engineering.local.md` frontmatter; skip if `autopilot_features.feature_video` is `false`. If the setting is missing, assume enabled. Also skip if the project has no browser-based UI (e.g., CLI tools, plugins, libraries, APIs).
 
 10. Output `<promise>DONE</promise>` when all preceding steps are complete
 
