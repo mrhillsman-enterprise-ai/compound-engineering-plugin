@@ -89,7 +89,7 @@ Agents are organized into categories for easier discovery.
 
 ## Commands
 
-### All-in-One Workflow
+### Autopilot Workflow
 
 Run a complete engineering workflow from feature description to PR:
 
@@ -98,7 +98,7 @@ Run a complete engineering workflow from feature description to PR:
 | `/lfg [description]` | Right-sized autopilot workflow: routes to direct edit, lightweight execution, or the full pipeline based on task complexity |
 | `/slfg [description]` | Same autopilot routing with parallel execution via swarm mode for standard/complex tasks |
 
-Both assess task complexity and choose the right amount of ceremony. Trivial fixes (typos, renames) execute directly. Bounded tasks with clear requirements skip planning and multi-agent review. Complex or ambiguous tasks run the full pipeline in autopilot mode: `brainstorm → plan → work → review → resolve todos → test → video`. All three routes still preserve the branch/commit/PR lifecycle. `/slfg` parallelizes where possible using swarm agents.
+Both assess task complexity and choose the right amount of ceremony. Trivial fixes (typos, renames) execute directly. Bounded tasks with clear requirements skip planning and multi-agent review. Complex or ambiguous tasks run the full pipeline in autopilot mode: `brainstorm → plan → work → review → resolve todos → test → video`. Autopilot skips workflow menus, but it still asks content questions when it would otherwise need to invent product behavior, scope, or success criteria. All three routes still preserve the branch/commit/PR lifecycle. `/slfg` parallelizes where possible using swarm agents.
 
 ### Step-by-Step Workflow
 

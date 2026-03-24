@@ -182,7 +182,7 @@ Notes:
 
 ## Workflow
 
-### All-in-one
+### Autopilot
 
 Run a complete engineering workflow from feature description to PR:
 
