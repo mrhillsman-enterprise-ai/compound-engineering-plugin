@@ -70,6 +70,8 @@ Before asking planning questions, search `docs/brainstorms/` for files matching 
 - It was created within the last 30 days (use judgment to override if the document is clearly still relevant or clearly stale)
 - It appears to cover the same user problem or scope
 
+When evaluating candidates, skip any requirements document that already has a completed plan referencing it (a plan in `docs/plans/` with `origin:` pointing to the doc and `status: completed`).
+
 If multiple source documents could match:
 - **When called from `lfg` or `slfg`** — prefer the document whose topic and problem frame most closely match the current feature description, not just the most recent. If two or more documents are equally close matches, ask the user which one to use.
 - **Otherwise** — ask which one to use using the platform's blocking question tool when available (see Interaction Method). Otherwise, present numbered options in chat and wait for the user's reply before proceeding.
