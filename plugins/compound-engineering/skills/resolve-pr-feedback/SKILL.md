@@ -63,7 +63,7 @@ Before processing, classify each unresolved thread by reading its comments:
 
 The distinction is about thread content, not who posted what. If there's a substantive response that defers rather than resolves, it's pending.
 
-If there are no new threads (only pending decisions), skip steps 3-7 and go straight to step 8.
+If there are no new items across all feedback types (only pending decisions from review threads, and no new `pr_comments` or `review_bodies`), skip steps 3-7 and go straight to step 8.
 
 ### 3. Plan
 

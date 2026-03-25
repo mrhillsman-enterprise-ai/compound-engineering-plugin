@@ -38,7 +38,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           isResolved
           path
           line
-          comments(first: 20) {
+          comments(first: 100) {
             nodes {
               id
               author { login }
