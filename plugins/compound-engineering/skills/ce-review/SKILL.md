@@ -231,10 +231,10 @@ else BASE=""; fi
 ```
 
 ```
-if [ -n "$BASE" ]; then echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE; elif git rev-parse HEAD >/dev/null 2>&1; then echo "BASE:none" && echo "FILES:" && git diff --name-only HEAD && echo "DIFF:" && git diff -U10 HEAD; else echo "BASE:none" && echo "FILES:" && git diff --cached --name-only && echo "DIFF:" && git diff --cached -U10; fi && echo "UNTRACKED:" && git ls-files --others --exclude-standard
+if [ -n "$BASE" ]; then echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE && echo "UNTRACKED:" && git ls-files --others --exclude-standard; else echo "ERROR: Unable to resolve review base branch locally. Fetch the base branch and rerun, or provide a PR number so the review scope can be determined from PR metadata."; fi
 ```
 
-If the branch has an open PR, the detection above uses the PR's base repository to resolve the merge-base, which handles fork workflows correctly. You may still fetch additional PR metadata with `gh pr view` for title, body, and linked issues, but do not fail if no PR exists.
+If the branch has an open PR, the detection above uses the PR's base repository to resolve the merge-base, which handles fork workflows correctly. You may still fetch additional PR metadata with `gh pr view` for title, body, and linked issues, but do not fail if no PR exists. If the base branch still cannot be resolved after the detection and fetch attempts, stop instead of falling back to `git diff HEAD`; a branch review without the base branch would only show uncommitted changes and silently miss all committed work.
 
 **If no argument (standalone on current branch):**
 
@@ -277,10 +277,10 @@ else BASE=""; fi
 ```
 
 ```
-if [ -n "$BASE" ]; then echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE; elif git rev-parse HEAD >/dev/null 2>&1; then echo "BASE:none" && echo "FILES:" && git diff --name-only HEAD && echo "DIFF:" && git diff -U10 HEAD; else echo "BASE:none" && echo "FILES:" && git diff --cached --name-only && echo "DIFF:" && git diff --cached -U10; fi && echo "UNTRACKED:" && git ls-files --others --exclude-standard
+if [ -n "$BASE" ]; then echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE && echo "UNTRACKED:" && git ls-files --others --exclude-standard; else echo "ERROR: Unable to resolve review base branch locally. Fetch the base branch and rerun, or provide a PR number so the review scope can be determined from PR metadata."; fi
 ```
 
-Parse: `BASE:` = merge-base SHA (or `none`), `FILES:` = file list, `DIFF:` = diff, `UNTRACKED:` = files excluded from review scope because they are not staged. Using `git diff $BASE` (without `..HEAD`) diffs the merge-base against the working tree, which includes committed, staged, and unstaged changes together. When BASE is empty and HEAD exists, the fallback uses `git diff HEAD` which shows all uncommitted changes. When HEAD itself does not exist (initial commit in an empty repo), the fallback uses `git diff --cached` for staged changes.
+Parse: `BASE:` = merge-base SHA, `FILES:` = file list, `DIFF:` = diff, `UNTRACKED:` = files excluded from review scope because they are not staged. Using `git diff $BASE` (without `..HEAD`) diffs the merge-base against the working tree, which includes committed, staged, and unstaged changes together. If the base branch cannot be resolved after the detection and fetch attempts, stop instead of falling back to `git diff HEAD`; a standalone review without the base branch would only show uncommitted changes and silently miss all committed work on the branch.
 
 **Untracked file handling:** Always inspect the `UNTRACKED:` list, even when `FILES:`/`DIFF:` are non-empty. Untracked files are outside review scope until staged. If the list is non-empty, tell the user which files are excluded. If any of them should be reviewed, stop and tell the user to `git add` them first and rerun. Only continue when the user is intentionally reviewing tracked changes only.
 
@@ -290,15 +290,13 @@ Understand what the change is trying to accomplish. The source of intent depends
 
 **PR/URL mode:** Use the PR title, body, and linked issues from `gh pr view` metadata. Supplement with commit messages from the PR if the body is sparse.
 
-**Branch mode:** If `${BASE}` was resolved in Stage 1, run `git log --oneline ${BASE}..<branch>`. If no merge-base was available (Stage 1 fell back to `git diff HEAD` or `git diff --cached`), derive intent from the branch name and the diff content alone.
+**Branch mode:** Run `git log --oneline ${BASE}..<branch>` using the resolved merge-base from Stage 1.
 
-**Standalone (current branch):** If `${BASE}` was resolved in Stage 1, run:
+**Standalone (current branch):** Run:
 
 ```
 echo "BRANCH:" && git rev-parse --abbrev-ref HEAD && echo "COMMITS:" && git log --oneline ${BASE}..HEAD
 ```
-
-If no merge-base was available, use the branch name and diff content to infer intent.
 
 Combined with conversation context (plan section summary, PR description, caller-provided description), write a 2-3 line intent summary:
 

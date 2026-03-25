@@ -91,6 +91,20 @@ describe("ce-review contract", () => {
     expect(resolveTodos).toContain("safe_auto")
   })
 
+  test("fails closed when merge-base is unresolved instead of falling back to git diff HEAD", async () => {
+    const content = await readRepoFile("plugins/compound-engineering/skills/ce-review/SKILL.md")
+
+    // No scope path should fall back to `git diff HEAD` or `git diff --cached` — those only
+    // show uncommitted changes and silently produce empty diffs on clean feature branches.
+    expect(content).not.toContain("git diff --name-only HEAD")
+    expect(content).not.toContain("git diff -U10 HEAD")
+    expect(content).not.toContain("git diff --cached")
+
+    // All three scope paths must emit ERROR when BASE is unresolved
+    const errorMatches = content.match(/echo "ERROR: Unable to resolve/g)
+    expect(errorMatches?.length).toBe(3) // PR mode, branch mode, standalone mode
+  })
+
   test("orchestration callers pass explicit mode flags", async () => {
     const lfg = await readRepoFile("plugins/compound-engineering/skills/lfg/SKILL.md")
     expect(lfg).toContain("/ce:review mode:autofix")
