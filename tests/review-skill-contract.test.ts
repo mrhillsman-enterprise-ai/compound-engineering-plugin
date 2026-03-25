@@ -1,6 +1,7 @@
 import { readFile } from "fs/promises"
 import path from "path"
 import { describe, expect, test } from "bun:test"
+import { parseFrontmatter } from "../src/utils/frontmatter"
 
 async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(process.cwd(), relativePath), "utf8")
@@ -89,6 +90,78 @@ describe("ce-review contract", () => {
     const resolveTodos = await readRepoFile("plugins/compound-engineering/skills/todo-resolve/SKILL.md")
     expect(resolveTodos).toContain("ce:review mode:autofix")
     expect(resolveTodos).toContain("safe_auto")
+  })
+
+  test("documents stack-specific conditional reviewers for the JSON pipeline", async () => {
+    const content = await readRepoFile("plugins/compound-engineering/skills/ce-review/SKILL.md")
+    const catalog = await readRepoFile(
+      "plugins/compound-engineering/skills/ce-review/references/persona-catalog.md",
+    )
+
+    for (const agent of [
+      "compound-engineering:review:dhh-rails-reviewer",
+      "compound-engineering:review:kieran-rails-reviewer",
+      "compound-engineering:review:kieran-python-reviewer",
+      "compound-engineering:review:kieran-typescript-reviewer",
+      "compound-engineering:review:julik-frontend-races-reviewer",
+    ]) {
+      expect(content).toContain(agent)
+      expect(catalog).toContain(agent)
+    }
+
+    expect(content).toContain("## Language-Aware Conditionals")
+    expect(content).not.toContain("## Language-Agnostic")
+  })
+
+  test("stack-specific reviewer agents follow the structured findings contract", async () => {
+    const reviewers = [
+      {
+        path: "plugins/compound-engineering/agents/review/dhh-rails-reviewer.md",
+        reviewer: "dhh-rails",
+      },
+      {
+        path: "plugins/compound-engineering/agents/review/kieran-rails-reviewer.md",
+        reviewer: "kieran-rails",
+      },
+      {
+        path: "plugins/compound-engineering/agents/review/kieran-python-reviewer.md",
+        reviewer: "kieran-python",
+      },
+      {
+        path: "plugins/compound-engineering/agents/review/kieran-typescript-reviewer.md",
+        reviewer: "kieran-typescript",
+      },
+      {
+        path: "plugins/compound-engineering/agents/review/julik-frontend-races-reviewer.md",
+        reviewer: "julik-frontend-races",
+      },
+    ]
+
+    for (const reviewer of reviewers) {
+      const content = await readRepoFile(reviewer.path)
+      const parsed = parseFrontmatter(content)
+      const tools = String(parsed.data.tools ?? "")
+
+      expect(String(parsed.data.description)).toContain("Conditional code-review persona")
+      expect(tools).toContain("Read")
+      expect(tools).toContain("Grep")
+      expect(tools).toContain("Glob")
+      expect(tools).toContain("Bash")
+      expect(content).toContain("## Confidence calibration")
+      expect(content).toContain("## What you don't flag")
+      expect(content).toContain("Return your findings as JSON matching the findings schema. No prose outside the JSON.")
+      expect(content).toContain(`"reviewer": "${reviewer.reviewer}"`)
+    }
+  })
+
+  test("leaves data-migration-expert as the unstructured deepen-plan reviewer", async () => {
+    const content = await readRepoFile(
+      "plugins/compound-engineering/agents/review/data-migration-expert.md",
+    )
+
+    expect(content).toContain("## Reviewer Checklist")
+    expect(content).toContain("Refuse approval until there is a written verification + rollback plan.")
+    expect(content).not.toContain("Return your findings as JSON matching the findings schema.")
   })
 
   test("fails closed when merge-base is unresolved instead of falling back to git diff HEAD", async () => {
