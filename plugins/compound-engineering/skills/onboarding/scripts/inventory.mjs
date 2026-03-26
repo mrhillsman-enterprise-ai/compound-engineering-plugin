@@ -89,7 +89,13 @@ async function detectName() {
   const gomod = await readText(join(root, "go.mod"));
   if (gomod) {
     const m = gomod.match(/^module\s+(.+)/m);
-    if (m) return m[1].split("/").pop();
+    if (m) {
+      const parts = m[1].split("/");
+      // Skip Go major-version suffix (v2, v3, etc.)
+      let last = parts.pop();
+      if (/^v\d+$/.test(last) && parts.length > 0) last = parts.pop();
+      return last;
+    }
   }
 
   const pyproject = await readText(join(root, "pyproject.toml"));
@@ -495,8 +501,11 @@ async function findEntryPoints(languages) {
   // Node/TS: also check package.json main/module fields
   if (langSet.has("Node.js") || langSet.has("TypeScript") || langSet.has("Deno")) {
     const pkg = await readJson(join(root, "package.json"));
-    if (pkg?.main && !entryPoints.includes(pkg.main)) entryPoints.push(pkg.main);
-    if (pkg?.module && !entryPoints.includes(pkg.module)) entryPoints.push(pkg.module);
+    for (const field of [pkg?.main, pkg?.module]) {
+      if (field && !entryPoints.includes(field) && await exists(join(root, field))) {
+        entryPoints.push(field);
+      }
+    }
   }
 
   // Python: __main__.py in src subdirectories (requires listing)
