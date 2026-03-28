@@ -297,7 +297,7 @@ Fill in at PR creation time:
 | `[THINKING]` | Thinking level (if known) | extended thinking |
 | `[HARNESS]` | Tool running you | Claude Code, Codex, Gemini CLI |
 | `[HARNESS_URL]` | Link to that tool | `https://claude.com/claude-code` |
-| `[VERSION]` | `plugin.json` -> `version` | 2.40.0 |
+| `[VERSION]` | `version` from `.claude-plugin/plugin.json` in the compound-engineering plugin root. If not accessible, use `latest` | 2.56.0 |
 
 ### Step 7: Create or update the PR
 
