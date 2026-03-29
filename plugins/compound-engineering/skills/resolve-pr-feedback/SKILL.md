@@ -177,7 +177,7 @@ Verdict meanings:
 
 **Batching**: Clusters count as 1 dispatch unit regardless of how many threads they contain. If there are 1-4 dispatch units total (clusters + individual items), dispatch all in parallel. For 5+ dispatch units, batch in groups of 4.
 
-**Conflict avoidance**: If multiple threads reference the same file and are NOT part of a cluster, group them into a single agent dispatch to avoid parallel edit conflicts. The agent handling a multi-thread file receives all threads for that file and addresses them sequentially.
+**Conflict avoidance**: No two dispatch units that touch the same file should run in parallel. Before dispatching, check for file overlaps across all dispatch units (clusters and individual items). If a cluster's file list overlaps with an individual item's file, or with another cluster's files, serialize those units -- dispatch one, wait for it to complete, then dispatch the next. Non-overlapping units can still run in parallel. Within a single dispatch unit handling multiple threads on the same file, the agent addresses them sequentially.
 
 **Sequential fallback**: Platforms that do not support parallel dispatch should run agents sequentially. Dispatch cluster units first (they are higher-leverage), then individual items.
 
