@@ -103,7 +103,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
    - You want to keep the default branch clean while experimenting
    - You plan to switch between branches frequently
 
-3. **Create Todo List** _(skip if Phase 0 already built one)_
+3. **Create Todo List** _(skip if Phase 0 already built one, or if Phase 0 routed as Trivial)_
    - Use your available task tracking tool (e.g., TodoWrite, task lists) to break the plan into actionable tasks
    - Derive tasks from the plan's implementation units, dependencies, files, test targets, and verification criteria
    - Carry each unit's `Execution note` into the task when present
