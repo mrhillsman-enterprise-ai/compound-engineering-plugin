@@ -103,8 +103,26 @@ describe("convertClaudeToCopilot", () => {
     expect(parsed.body).toMatch(/## Capabilities\n- Threat modeling\n- OWASP/)
   })
 
-  test("model field is always dropped (Copilot uses its own model)", () => {
+  test("agent model field is passed through", () => {
     const bundle = convertClaudeToCopilot(fixturePlugin, defaultOptions)
+    const parsed = parseFrontmatter(bundle.agents[0].content)
+    expect(parsed.data.model).toBe("claude-sonnet-4-20250514")
+  })
+
+  test("agent without model omits model field", () => {
+    const plugin: ClaudePlugin = {
+      ...fixturePlugin,
+      agents: [
+        {
+          name: "no-model",
+          description: "No model agent",
+          body: "Content.",
+          sourcePath: "/tmp/plugin/agents/no-model.md",
+        },
+      ],
+    }
+
+    const bundle = convertClaudeToCopilot(plugin, defaultOptions)
     const parsed = parseFrontmatter(bundle.agents[0].content)
     expect(parsed.data.model).toBeUndefined()
   })
