@@ -331,7 +331,7 @@ This command takes a work document (plan, specification, or todo file) and execu
 
 4. **Notify User**
    - Summarize what was completed
-   - Link to PR
+   - Link to PR (if one was created)
    - Note any follow-up work needed
    - Suggest next steps if applicable
 
