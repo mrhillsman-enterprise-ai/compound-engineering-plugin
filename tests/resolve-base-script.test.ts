@@ -206,6 +206,7 @@ describe("resolve-base.sh", () => {
     const checkoutRoot = await fs.mkdtemp(path.join(os.tmpdir(), "resolve-base-checkout-"))
     await runCommand(["git", "clone", "--depth", "1", bareUrl, checkoutRoot], os.tmpdir(), gitEnv)
     await runGit(["fetch", "--depth", "1", "origin", "feature"], checkoutRoot)
+    await runGit(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"], checkoutRoot)
     await runGit(["checkout", "--detach", featureSha], checkoutRoot)
 
     const originHead = await runGit(
