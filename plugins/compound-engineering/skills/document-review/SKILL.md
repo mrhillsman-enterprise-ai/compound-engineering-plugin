@@ -49,11 +49,11 @@ Analyze the document content to determine which conditional personas to activate
 
 **product-lens** -- activate when the document makes challengeable claims about what to build and why, or when the proposed work carries strategic weight beyond the immediate problem. The system's users may be end users, developers, operators, maintainers, or any other audience -- the criteria are domain-agnostic. Check for either leg:
 
-*Leg 1 — Premise claims:* The document asserts a problem, need, or priority that could be wrong:
-- Problem framing that claims something needs to be built -- the "why" could be challenged
+*Leg 1 — Premise claims:* The document stakes a position on what to build or why that a knowledgeable stakeholder could reasonably challenge -- not merely describing a task or restating known requirements:
+- Problem framing where the stated need is non-obvious or debatable, not self-evident from existing context
 - Solution selection where alternatives plausibly exist (implicit or explicit)
-- Prioritization decisions that determine what gets built vs deferred
-- Goal statements tied to outcomes for the system's users (any kind)
+- Prioritization decisions that explicitly rank what gets built vs deferred
+- Goal statements that predict specific user outcomes, not just restate constraints or describe deliverables
 
 *Leg 2 — Strategic weight:* The proposed work could affect system trajectory, user perception, or competitive positioning, even if the premise is sound:
 - Changes that shape how the system is perceived or what it becomes known for
