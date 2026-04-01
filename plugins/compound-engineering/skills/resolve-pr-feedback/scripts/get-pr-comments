@@ -86,6 +86,7 @@ query FetchPRFeedback($owner: String!, $repo: String!, $pr: Int!) {
   [$pr.reviewThreads.edges[]
     | select(.node.isResolved == true)
     | { thread_id: .node.id, path: .node.path, line: .node.line,
+        first_comment_body: .node.comments.nodes[0].body,
         last_comment_at: ([.node.comments.nodes[].createdAt] | sort | last) }]
     | sort_by(.last_comment_at) | .[-10:] | reverse as $resolved |
 {

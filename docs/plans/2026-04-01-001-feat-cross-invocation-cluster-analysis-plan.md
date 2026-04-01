@@ -93,7 +93,7 @@ The skill's cluster analysis has two gates: volume (3+ items) and verify-loop re
 │             signal: true/false                        │
 │             resolved_threads: [                       │
 │               { thread_id, path, line,               │
-│                 last_comment_at }                     │
+│                 first_comment_body, last_comment_at } │
 │               ...last N by recency                   │
 │             ]                                        │
 └──────────────────────────────────────────────────────┘
@@ -157,7 +157,7 @@ The skill's cluster analysis has two gates: volume (3+ items) and verify-loop re
 
 **Approach:**
 - Widen the jq filter: keep the existing `review_threads` array (unresolved, non-outdated, as before). Add a new selection for resolved threads (`isResolved == true`), sorted by most-recent comment `createdAt`, limited to the last N=10.
-- Output the existing three keys (`review_threads`, `pr_comments`, `review_bodies`) unchanged, plus a new `cross_invocation` object containing: `signal` (boolean — true when both resolved threads and unresolved review threads exist), and `resolved_threads` (array of objects with `thread_id`, `path`, `line`, `last_comment_at`).
+- Output the existing three keys (`review_threads`, `pr_comments`, `review_bodies`) unchanged, plus a new `cross_invocation` object containing: `signal` (boolean — true when both resolved threads and unresolved review threads exist), and `resolved_threads` (array of objects with `thread_id`, `path`, `line`, `first_comment_body`, `last_comment_at`).
 - No `gh api user` call. No author matching. No reply pattern detection. The signal is simply: resolved threads exist AND new threads exist.
 
 **Patterns to follow:**
