@@ -88,6 +88,26 @@ describe("writeQwenBundle", () => {
     expect(result._compound_managed_mcp).toEqual(["fresh"])
   })
 
+  test("does not prune untracked user config when plugin has zero MCP servers", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qwen-untracked-"))
+
+    // Pre-existing user config with no tracking key (never had the plugin before)
+    await fs.writeFile(
+      path.join(tempRoot, "qwen-extension.json"),
+      JSON.stringify({
+        name: "user-project",
+        mcpServers: { "user-tool": { command: "my-tool" } },
+      }),
+    )
+
+    // Plugin installs with zero MCP servers
+    await writeQwenBundle(tempRoot, makeBundle())
+
+    const result = JSON.parse(await fs.readFile(path.join(tempRoot, "qwen-extension.json"), "utf8"))
+    expect(result.mcpServers["user-tool"]).toBeDefined()
+    expect(result._compound_managed_mcp).toEqual([])
+  })
+
   test("cleans up all plugin MCP servers when bundle has none", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qwen-zero-"))
 

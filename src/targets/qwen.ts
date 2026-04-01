@@ -69,12 +69,15 @@ async function mergeQwenConfig(
     : {}
 
   // Remove previously-managed plugin servers that are no longer in the bundle.
-  // Legacy migration: if no tracking key exists, assume all existing servers are plugin-managed
-  // (the old writer overwrote the entire file, so there are no user servers to preserve).
-  const prevManaged = Array.isArray(existing[MANAGED_KEY])
-    ? existing[MANAGED_KEY] as string[]
-    : Object.keys(existingMcp)
+  // Legacy migration: if no tracking key exists AND plugin has servers, assume all
+  // existing servers are plugin-managed (the old writer overwrote the entire file).
+  // When incoming is empty, skip pruning — there's nothing to migrate and we'd
+  // wrongly delete user servers from a pre-existing untracked config.
   const incomingMcp = incoming.mcpServers ?? {}
+  const hasTrackingKey = Array.isArray(existing[MANAGED_KEY])
+  const prevManaged = hasTrackingKey
+    ? existing[MANAGED_KEY] as string[]
+    : Object.keys(incomingMcp).length > 0 ? Object.keys(existingMcp) : []
   for (const name of prevManaged) {
     if (!(name in incomingMcp)) {
       delete existingMcp[name]

@@ -62,11 +62,15 @@ async function mergeCopilotMcpConfig(
     : {}
 
   // Remove previously-managed plugin servers that are no longer in the bundle.
-  // Legacy migration: if no tracking key exists, assume all existing servers are plugin-managed
-  // (the old writer overwrote the entire file, so there are no user servers to preserve).
-  const prevManaged = Array.isArray(existing[MANAGED_KEY])
+  // Legacy migration: if no tracking key exists AND plugin has servers, assume all
+  // existing servers are plugin-managed (the old writer overwrote the entire file).
+  // When incoming is empty, skip pruning — there's nothing to migrate and we'd
+  // wrongly delete user servers from a pre-existing untracked config.
+  const incomingKeys = Object.keys(incoming)
+  const hasTrackingKey = Array.isArray(existing[MANAGED_KEY])
+  const prevManaged = hasTrackingKey
     ? existing[MANAGED_KEY] as string[]
-    : Object.keys(existingMcp)
+    : incomingKeys.length > 0 ? Object.keys(existingMcp) : []
   for (const name of prevManaged) {
     if (!(name in incoming)) {
       delete existingMcp[name]
@@ -74,19 +78,13 @@ async function mergeCopilotMcpConfig(
   }
 
   const mergedMcp = { ...existingMcp, ...incoming }
-  const incomingKeys = Object.keys(incoming)
 
   // Nothing to write — no user servers, no plugin servers, no existing file
   if (Object.keys(mergedMcp).length === 0 && Object.keys(existing).length === 0) {
     return null
   }
 
-  // Strip tracking key when plugin has no servers and no managed entries remain
-  const { [MANAGED_KEY]: _, ...rest } = existing
-  if (incomingKeys.length === 0 && Object.keys(mergedMcp).length === 0) {
-    return { ...rest, mcpServers: {} }
-  }
-
+  // Always write tracking key (even as []) to prevent legacy fallback on future installs
   return {
     ...existing,
     mcpServers: mergedMcp,
