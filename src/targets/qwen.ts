@@ -47,6 +47,8 @@ export async function writeQwenBundle(outputRoot: string, bundle: QwenBundle): P
 }
 
 const MANAGED_KEY = "_compound_managed_mcp"
+const MANAGED_KEYS_KEY = "_compound_managed_keys"
+const TRACKING_KEYS = new Set([MANAGED_KEY, MANAGED_KEYS_KEY])
 
 async function mergeQwenConfig(
   configPath: string,
@@ -86,6 +88,19 @@ async function mergeQwenConfig(
 
   const mergedMcp = { ...existingMcp, ...incomingMcp }
   const { mcpServers: _, ...incomingRest } = incoming
+  const incomingTopKeys = Object.keys(incomingRest).filter((k) => !TRACKING_KEYS.has(k))
+
+  // Prune top-level keys from previous installs that are no longer in the incoming bundle.
+  // Only prune keys we previously tracked; skip on first install (no tracking key yet).
+  const prevManagedKeys = Array.isArray(existing[MANAGED_KEYS_KEY])
+    ? existing[MANAGED_KEYS_KEY] as string[]
+    : []
+  for (const key of prevManagedKeys) {
+    if (!incomingTopKeys.includes(key) && key in existing) {
+      delete existing[key]
+    }
+  }
+
   const merged = { ...existing, ...incomingRest } as QwenExtensionConfig & Record<string, unknown>
 
   if (Object.keys(mergedMcp).length > 0) {
@@ -94,9 +109,9 @@ async function mergeQwenConfig(
     delete merged.mcpServers
   }
 
-  // Always write the tracking key (even as []) so the legacy fallback
-  // doesn't treat user servers as plugin-managed on a future install.
+  // Always write tracking keys (even as []) so future installs know what to prune.
   merged[MANAGED_KEY] = Object.keys(incomingMcp)
+  merged[MANAGED_KEYS_KEY] = incomingTopKeys
 
   return merged as QwenExtensionConfig
 }

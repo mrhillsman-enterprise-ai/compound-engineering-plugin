@@ -142,4 +142,38 @@ describe("writeQwenBundle", () => {
     expect(result.mcpServers.new_plugin).toBeDefined()
     expect(result.mcpServers.plugin).toBeUndefined()
   })
+
+  test("prunes stale top-level plugin keys when incoming config drops them", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qwen-stale-keys-"))
+
+    // First install with settings
+    const bundleWithSettings: QwenBundle = {
+      config: {
+        name: "test-plugin",
+        version: "1.0.0",
+        commands: "commands",
+        skills: "skills",
+        agents: "agents",
+        settings: [{ name: "api-key", description: "API key", envVar: "API_KEY", sensitive: true }],
+      },
+      agents: [],
+      commandFiles: [],
+      skillDirs: [],
+    }
+    await writeQwenBundle(tempRoot, bundleWithSettings)
+
+    // User adds their own top-level key
+    const configPath = path.join(tempRoot, "qwen-extension.json")
+    const afterInstall = JSON.parse(await fs.readFile(configPath, "utf8"))
+    afterInstall.userCustom = "should-survive"
+    await fs.writeFile(configPath, JSON.stringify(afterInstall))
+
+    // Second install without settings
+    await writeQwenBundle(tempRoot, makeBundle())
+
+    const result = JSON.parse(await fs.readFile(configPath, "utf8"))
+    expect(result.settings).toBeUndefined()
+    expect(result.userCustom).toBe("should-survive")
+    expect(result.name).toBe("test-plugin")
+  })
 })
