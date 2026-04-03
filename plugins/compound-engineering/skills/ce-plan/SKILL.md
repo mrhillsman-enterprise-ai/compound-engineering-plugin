@@ -158,7 +158,7 @@ Run these agents in parallel:
 
 - Task compound-engineering:research:repo-research-analyst(Scope: technology, architecture, patterns. {planning context summary})
 - Task compound-engineering:research:learnings-researcher(planning context summary)
-- (conditional) Task compound-engineering:research:slack-researcher({planning context summary}) — if any `slack_*` tool is available in the tool list. If the agent returns an error or reports that the Slack MCP is unavailable, log a warning and continue without Slack context.
+- (conditional) Task compound-engineering:research:slack-researcher({planning context summary}. If the origin document contains a Slack context section, include it verbatim so the researcher can focus on gaps rather than re-searching.) — if any `slack_*` tool is available in the tool list. If the agent returns an error or reports that the Slack MCP is unavailable, log a warning and continue without Slack context.
 
 Collect:
 - Technology stack and versions (used in section 1.2 to make sharper external research decisions)
