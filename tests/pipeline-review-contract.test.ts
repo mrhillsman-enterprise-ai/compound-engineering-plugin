@@ -28,8 +28,8 @@ describe("ce-work review contract", () => {
   test("delegates commit and PR to dedicated skills", async () => {
     const content = await readRepoFile("plugins/compound-engineering/skills/ce-work/SKILL.md")
 
-    expect(content).toContain("`git-commit-push-pr` skill")
-    expect(content).toContain("`git-commit` skill")
+    expect(content).toContain("`ce-commit-push-pr` skill")
+    expect(content).toContain("`ce-commit` skill")
 
     // Should not contain inline PR templates or attribution placeholders
     expect(content).not.toContain("gh pr create")
@@ -44,8 +44,8 @@ describe("ce-work review contract", () => {
     expect(beta).not.toContain("Consider Code Review")
 
     // Both delegate to git skills
-    expect(beta).toContain("`git-commit-push-pr` skill")
-    expect(beta).toContain("`git-commit` skill")
+    expect(beta).toContain("`ce-commit-push-pr` skill")
+    expect(beta).toContain("`ce-commit` skill")
     expect(beta).not.toContain("gh pr create")
   })
 

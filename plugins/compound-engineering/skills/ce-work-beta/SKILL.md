@@ -359,7 +359,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
 
 2. **Commit and Create Pull Request**
 
-   Load the `git-commit-push-pr` skill to handle committing, pushing, and PR creation. The skill handles convention detection, branch safety, logical commit splitting, adaptive PR descriptions, and attribution badges.
+   Load the `ce-commit-push-pr` skill to handle committing, pushing, and PR creation. The skill handles convention detection, branch safety, logical commit splitting, adaptive PR descriptions, and attribution badges.
 
    When providing context for the PR description, include:
    - The plan's summary and key decisions
@@ -368,7 +368,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
    - Figma design link (if applicable)
    - The Post-Deploy Monitoring & Validation section (see Phase 3 Step 4)
 
-   If the user prefers to commit without creating a PR, load the `git-commit` skill instead.
+   If the user prefers to commit without creating a PR, load the `ce-commit` skill instead.
 
 3. **Update Plan Status**
 
