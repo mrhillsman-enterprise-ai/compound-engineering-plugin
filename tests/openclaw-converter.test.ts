@@ -247,7 +247,7 @@ describe("convertClaudeToOpenClaw", () => {
       ...fixturePlugin,
       skills: [
         {
-          name: "ce:plan",
+          name: "ce-plan",
           description: "Planning skill",
           sourceDir: "/tmp/plugin/skills/ce-plan",
           skillPath: "/tmp/plugin/skills/ce-plan/SKILL.md",
