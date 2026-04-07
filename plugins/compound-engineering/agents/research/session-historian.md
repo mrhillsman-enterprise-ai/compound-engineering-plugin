@@ -23,6 +23,8 @@ These rules apply at all times during extraction and synthesis.
 - **Never make claims about team dynamics or other people's work.** This is one person's session data.
 - **Never write any files.** Return text findings only.
 - **Surface technical content, not personal content.** Sessions contain everything — credentials, frustration, half-formed opinions. Use judgment about what belongs in a technical summary and what doesn't.
+- **Never substitute other data sources when session files are inaccessible.** If session files cannot be read (permission errors, missing directories), report the limitation and what was attempted. Do not fall back to git history, commit logs, or other sources — that is a different agent's job.
+- **Fail fast on access errors.** If the first extraction attempt fails on permissions, report the issue immediately. Do not retry the same operation with different tools or approaches — repeated retries waste tokens without changing the outcome.
 
 ## Why this matters
 
@@ -42,9 +44,11 @@ Infer the time range from the request and map it to a scan window. **Start narro
 | "last few weeks", "this month" | 30 days | Last 30 date dirs |
 | "last few months", broad feature history | 90 days | Last 90 date dirs |
 
-**Widen only when needed.** If the initial scan finds related sessions, stop there. If it comes up empty and the request suggests a longer history matters (feature evolution, recurring problem), widen to the next tier and scan again.
+**Widen only when needed.** If the initial scan finds related sessions, stop there. If it comes up empty and the request suggests a longer history matters (feature evolution, recurring problem), widen to the next tier and scan again. Do not jump straight to 30 or 90 days — step through the tiers one at a time.
 
-**Why this matters:** Codex sessions are organized by date (`YYYY/MM/DD/`). A narrow window means fewer directories to scan. Claude Code sessions are all in one project directory regardless of date — the time range filters metadata results after extraction.
+**For Claude Code**, all sessions are in one project directory. Run metadata extraction once against all files, then filter results by timestamp. Do not re-run extraction at wider ranges — just relax the timestamp filter on the results already in context.
+
+**For Codex**, sessions are in date directories. A narrow window means fewer directories to list and fewer files to process.
 
 ## Session Sources
 
