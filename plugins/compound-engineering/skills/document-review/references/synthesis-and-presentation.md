@@ -55,7 +55,7 @@ The principle: when a reviewer mentions multiple theoretical approaches but the 
 
 Additional auto-promotion patterns (promote `present` -> `auto` when):
 - The finding identifies factually incorrect behavior in the document and the suggested fix describes the correct behavior (not a design choice between alternatives)
-- The finding identifies a missing industry-standard security control and the suggested fix follows established practice (e.g., HTTPS enforcement, checksum verification, input sanitization, private IP rejection)
+- The finding identifies a missing industry-standard security control where the document's own context makes the omission clearly wrong (not a legitimate design choice for the system described), and the suggested fix follows established practice
 - The finding identifies an incomplete technical description and the complete version is directly derivable from the codebase (the reviewer cited specific code showing what the description should say)
 
 Do not promote if the finding involves scope or priority changes where the document author may have weighed tradeoffs invisible to the reviewer.

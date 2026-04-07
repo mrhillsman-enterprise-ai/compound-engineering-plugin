@@ -34,7 +34,7 @@ Rules:
     - Incorrect behavior -- the document describes behavior that is factually wrong, and the correct behavior is obvious from context or the codebase
     - Missing standard security measures -- HTTPS enforcement, checksum verification, input sanitization, private IP rejection, or other controls with known implementations where omission is clearly a bug
     - Incomplete technical descriptions -- the accurate/complete version is directly derivable from the codebase
-    - Missing requirements that follow mechanically from the document's own stated decisions or goals
+    - Missing requirements that follow mechanically from the document's own explicit, concrete decisions (not high-level goals -- a goal can be satisfied by multiple valid requirements)
     The test is not "is this fix important?" but "is there more than one reasonable way to fix this?" If a competent implementer would arrive at the same fix independently, it is auto -- even if the fix is substantive. Always include `suggested_fix`. NOT auto if more than one reasonable fix exists or if scope/priority judgment is involved.
   - `present`: Requires user judgment -- genuinely multiple valid approaches where the right choice depends on priorities, tradeoffs, or context the reviewer does not have. Examples: architectural choices with real tradeoffs, scope decisions, feature prioritization, UX design choices.
 - `suggested_fix` is required for `auto` findings. For `present` findings, include only when the fix is obvious.
