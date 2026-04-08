@@ -62,7 +62,7 @@ All tokens are optional. Each one present means one less thing to infer. When ab
 - **Skip all user questions.** Never use the platform question tool (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini) or other interactive prompts. Infer intent conservatively if the diff metadata is thin.
 - **Require a determinable diff scope.** If headless mode cannot determine a diff scope (no branch, PR, or `base:` ref determinable without user interaction), emit `Review failed (headless mode). Reason: no diff scope detected. Re-invoke with a branch name, PR number, or base:<ref>.` and stop without dispatching agents.
 - **Apply only `safe_auto -> review-fixer` findings in a single pass.** No bounded re-review rounds. Leave `gated_auto`, `manual`, `human`, and `release` work unresolved and return them in the structured output.
-- **Return all non-auto findings as structured text output.** Use the headless output envelope format (see Stage 6 below) preserving severity, autofix_class, owner, requires_verification, confidence, evidence[], and pre_existing per finding.
+- **Return all non-auto findings as structured text output.** Use the headless output envelope format (see Stage 6 below) preserving severity, autofix_class, owner, requires_verification, confidence, and pre_existing per finding. Enrich with detail-tier fields (why_it_matters, evidence[], suggested_fix) from the per-agent artifact files on disk (see Detail enrichment in Stage 6).
 - **Write a run artifact** under `.context/compound-engineering/ce-review/<run-id>/` summarizing findings, applied fixes, and advisory outputs. Include the artifact path in the structured output.
 - **Do not create todo files.** The caller receives structured findings and routes downstream work itself.
 - **Do not switch the shared checkout.** If the caller passes an explicit PR or branch target, `mode:headless` must run in an isolated checkout/worktree or stop instead of running `gh pr checkout` / `git checkout`. When stopping, emit `Review failed (headless mode). Reason: cannot switch shared checkout. Re-invoke with base:<ref> to review the current checkout, or run from an isolated worktree.`
@@ -385,6 +385,19 @@ CE always-on agents (agent-native-reviewer, learnings-researcher) and CE conditi
 
 The orchestrator (this skill) stays on the default model because it handles intent discovery, reviewer selection, finding merge/dedup, and synthesis -- tasks that benefit from stronger reasoning.
 
+#### Run ID
+
+Generate a unique run identifier before dispatching any agents. This ID scopes all agent artifact files and the post-review run artifact to the same directory.
+
+```bash
+RUN_ID=$(date +%Y%m%d-%H%M%S)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d ' ')
+mkdir -p ".context/compound-engineering/ce-review/$RUN_ID"
+```
+
+Pass `{run_id}` to every persona sub-agent so they can write their full analysis to `.context/compound-engineering/ce-review/{run_id}/{reviewer_name}.json`.
+
+**Report-only mode:** Skip run-id generation and directory creation. Do not pass `{run_id}` to agents. Agents return compact JSON only with no file write, consistent with report-only's no-write contract.
+
 #### Spawning
 
 Omit the `mode` parameter when dispatching sub-agents so the user's configured permission settings apply. Do not pass `mode: "auto"`.
@@ -396,22 +409,37 @@ Spawn each selected persona reviewer as a parallel sub-agent using the subagent 
 3. The JSON output contract from the findings schema included below
 4. PR metadata: title, body, and URL when reviewing a PR (empty string otherwise). Passed in a `<pr-context>` block so reviewers can verify code against stated intent
 5. Review context: intent summary, file list, diff
-6. **For `project-standards` only:** the standards file path list from Stage 3b, wrapped in a `<standards-paths>` block appended to the review context
+6. Run ID and reviewer name for the artifact file path
+7. **For `project-standards` only:** the standards file path list from Stage 3b, wrapped in a `<standards-paths>` block appended to the review context
 
-Persona sub-agents are **read-only**: they review and return structured JSON. They do not edit files or propose refactors.
+Persona sub-agents are **read-only** with respect to the project: they review and return structured JSON. They do not edit project files or propose refactors. The one permitted write is saving their full analysis to the `.context/` artifact path specified in the output contract.
 
-Read-only here means **non-mutating**, not "no shell access." Reviewer sub-agents may use non-mutating inspection commands when needed to gather evidence or verify scope, including read-oriented `git` / `gh` usage such as `git diff`, `git show`, `git blame`, `git log`, and `gh pr view`. They must not edit files, change branches, commit, push, create PRs, or otherwise mutate the checkout or repository state.
+Read-only here means **non-mutating**, not "no shell access." Reviewer sub-agents may use non-mutating inspection commands when needed to gather evidence or verify scope, including read-oriented `git` / `gh` usage such as `git diff`, `git show`, `git blame`, `git log`, and `gh pr view`. They must not edit project files, change branches, commit, push, create PRs, or otherwise mutate the checkout or repository state.
 
-Each persona sub-agent returns JSON matching the findings schema included below:
+Each persona sub-agent writes full JSON (all schema fields) to `.context/compound-engineering/ce-review/{run_id}/{reviewer_name}.json` and returns compact JSON with merge-tier fields only:
 
 ```json
 {
   "reviewer": "security",
-  "findings": [...],
+  "findings": [
+    {
+      "title": "User-supplied ID in account lookup without ownership check",
+      "severity": "P0",
+      "file": "orders_controller.rb",
+      "line": 42,
+      "confidence": 0.92,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false
+    }
+  ],
   "residual_risks": [...],
   "testing_gaps": [...]
 }
 ```
+
+Detail-tier fields (`why_it_matters`, `evidence`, `suggested_fix`) are in the artifact file only. If the file write fails, the compact return still provides everything the merge needs.
 
 **CE always-on agents** (agent-native-reviewer, learnings-researcher) are dispatched as standard Agent calls in parallel with the persona agents. Give them the same review context bundle the personas receive: entry mode, any PR metadata gathered in Stage 1, intent summary, review base branch name when known, `BASE:` marker, file list, diff, and `UNTRACKED:` scope notes. Do not invoke them with a generic "review this" prompt. Their output is unstructured and synthesized separately in Stage 6.
 
@@ -419,22 +447,22 @@ Each persona sub-agent returns JSON matching the findings schema included below:
 
 ### Stage 5: Merge findings
 
-Convert multiple reviewer JSON payloads into one deduplicated, confidence-gated finding set.
+Convert multiple reviewer compact JSON returns into one deduplicated, confidence-gated finding set. The compact returns contain only merge-tier fields (title, severity, file, line, confidence, autofix_class, owner, requires_verification, pre_existing). Detail-tier fields (why_it_matters, evidence, suggested_fix) are on disk in the per-agent artifact files and are not loaded at this stage.
 
-1. **Validate.** Check each output against the schema. Drop malformed findings (missing required fields). Record the drop count.
+1. **Validate.** Check each compact return for merge-tier required fields: title, severity, file, line, confidence, autofix_class, owner, requires_verification, pre_existing. Drop findings missing any of these. Do not validate against the full schema here -- the full schema (including why_it_matters and evidence) applies to the artifact files on disk, not the compact returns. Record the drop count.
 2. **Confidence gate.** Suppress findings below 0.60 confidence. Exception: P0 findings at 0.50+ confidence survive the gate -- critical-but-uncertain issues must not be silently dropped. Record the suppressed count. This matches the persona instructions and the schema's confidence thresholds.
-3. **Deduplicate.** Compute fingerprint: `normalize(file) + line_bucket(line, +/-3) + normalize(title)`. When fingerprints match, merge: keep highest severity, keep highest confidence with strongest evidence, union evidence, note which reviewers flagged it.
+3. **Deduplicate.** Compute fingerprint: `normalize(file) + line_bucket(line, +/-3) + normalize(title)`. When fingerprints match, merge: keep highest severity, keep highest confidence, note which reviewers flagged it.
 4. **Cross-reviewer agreement.** When 2+ independent reviewers flag the same issue (same fingerprint), boost the merged confidence by 0.10 (capped at 1.0). Cross-reviewer agreement is strong signal -- independent reviewers converging on the same issue is more reliable than any single reviewer's confidence. Note the agreement in the Reviewer column of the output (e.g., "security, correctness").
 5. **Separate pre-existing.** Pull out findings with `pre_existing: true` into a separate list.
-5. **Resolve disagreements.** When reviewers flag the same code region but disagree on severity, autofix_class, or owner, record the disagreement in the finding's evidence (e.g., "security rated P0, correctness rated P1 -- keeping P0"). This transparency helps the user understand why a finding was routed the way it was.
-6. **Normalize routing.** For each merged finding, set the final `autofix_class`, `owner`, and `requires_verification`. If reviewers disagree, keep the most conservative route. Synthesis may narrow a finding from `safe_auto` to `gated_auto` or `manual`, but must not widen it without new evidence.
-7. **Partition the work.** Build three sets:
+6. **Resolve disagreements.** When reviewers flag the same code region but disagree on severity, autofix_class, or owner, annotate the Reviewer column with the disagreement (e.g., "security (P0), correctness (P1) -- kept P0"). This transparency helps the user understand why a finding was routed the way it was.
+7. **Normalize routing.** For each merged finding, set the final `autofix_class`, `owner`, and `requires_verification`. If reviewers disagree, keep the most conservative route. Synthesis may narrow a finding from `safe_auto` to `gated_auto` or `manual`, but must not widen it without new evidence.
+8. **Partition the work.** Build three sets:
    - in-skill fixer queue: only `safe_auto -> review-fixer`
    - residual actionable queue: unresolved `gated_auto` or `manual` findings whose owner is `downstream-resolver`
    - report-only queue: `advisory` findings plus anything owned by `human` or `release`
-8. **Sort.** Order by severity (P0 first) -> confidence (descending) -> file path -> line number.
-9. **Collect coverage data.** Union residual_risks and testing_gaps across reviewers.
-10. **Preserve CE agent artifacts.** Keep the learnings, agent-native, schema-drift, and deployment-verification outputs alongside the merged finding set. Do not drop unstructured agent output just because it does not match the persona JSON schema.
+9. **Sort.** Order by severity (P0 first) -> confidence (descending) -> file path -> line number.
+10. **Collect coverage data.** Union residual_risks and testing_gaps across reviewers.
+11. **Preserve CE agent artifacts.** Keep the learnings, agent-native, schema-drift, and deployment-verification outputs alongside the merged finding set. Do not drop unstructured agent output just because it does not match the persona JSON schema.
 
 ### Stage 6: Synthesize and present
 
@@ -523,6 +551,12 @@ Coverage:
 
 Review complete
 ```
+
+**Detail enrichment (headless only):** The headless envelope includes `Why:`, `Evidence:`, and `Suggested fix:` lines that are detail-tier fields not present in the compact agent returns. After merge (Stage 5), read the per-agent artifact files from `.context/compound-engineering/ce-review/{run_id}/` for only the findings that survived dedup and confidence gating.
+
+For each surviving finding, look up its detail-tier fields by matching `file + line` against the full JSON in a per-agent artifact file. When a finding was merged from multiple reviewers (e.g., "security, correctness"), try each reviewer's artifact file in order and use the first match. Match on `file + line` rather than title, since `normalize(title)` in Stage 5 dedup may have altered the title string.
+
+If no artifact file contains a match (all writes failed, or the finding was synthesized during merge), omit the detail lines for that finding and note the gap in Coverage.
 
 **Formatting rules:**
 - The `[needs-verification]` marker appears only on findings where `requires_verification: true`.
@@ -626,10 +660,11 @@ After presenting findings and verdict (Stage 6), route the next steps by mode. R
 #### Step 4: Emit artifacts and downstream handoff
 
 - In interactive, autofix, and headless modes, write a per-run artifact under `.context/compound-engineering/ce-review/<run-id>/` containing:
-  - synthesized findings
+  - synthesized findings (merged output from Stage 5)
   - applied fixes
   - residual actionable work
   - advisory-only outputs
+  Per-agent full-detail JSON files (`{reviewer_name}.json`) are already present in this directory from Stage 4 dispatch.
 - In autofix mode, create durable todo files only for unresolved actionable findings whose final owner is `downstream-resolver`. Load the `todo-create` skill for the canonical directory path, naming convention, YAML frontmatter structure, and template. Each todo should map the finding's severity to the todo priority (`P0`/`P1` -> `p1`, `P2` -> `p2`, `P3` -> `p3`) and set `status: ready` since these findings have already been triaged by synthesis.
 - Do not create todos for `advisory` findings, `owner: human`, `owner: release`, or protected-artifact cleanup suggestions.
 - If only advisory outputs remain, create no todos.
