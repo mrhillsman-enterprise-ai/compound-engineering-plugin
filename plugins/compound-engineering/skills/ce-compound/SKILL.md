@@ -160,7 +160,7 @@ Launch research subagents. Each returns text data to the orchestrator.
    - Dispatched as `compound-engineering:research:session-historian`
    - Dispatch in **foreground** — this agent reads session files outside the working directory (`~/.claude/projects/`, `~/.codex/sessions/`, `~/.cursor/projects/`) which background agents may not have access to
    - Searches prior Claude Code, Codex, and Cursor sessions for the same project to find related investigation context
-   - Correlates sessions by git branch (Claude Code) and working directory (Codex, Cursor)
+   - Correlates sessions by repo name across all platforms (matches sessions from main checkouts, worktrees, and Conductor workspaces)
    - In the dispatch prompt, pass:
      - A specific description of the problem being documented — not a generic topic, but the concrete issue (error messages, module names, what broke and how it was fixed). This is what the agent filters its findings against.
      - The current git branch and working directory
